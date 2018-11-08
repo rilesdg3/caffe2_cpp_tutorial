@@ -1,21 +1,22 @@
 #include <caffe2/core/init.h>
-#include "caffe2/util/blob.h"
-#include "caffe2/util/model.h"
-#include "caffe2/util/net.h"
+#include <caffe2/core/tensor.h>
+#include "blob.h"
+#include "model.h"
+#include "net.h"
 
-#include "caffe2/util/cmd.h"
+#include "cmd.h"
 
-CAFFE2_DEFINE_string(model, "char_rnn", "The RNN model.");
-CAFFE2_DEFINE_string(train_data, "res/shakespeare.txt",
-                     "Path to training data in a text file format");
+C10_DEFINE_string(model, "char_rnn", "The RNN model.");
+C10_DEFINE_string(train_data, "shakespeare.txt",
+                     "/home/ryan/caffe2_cpp_tutorial-master/res/shakespeare.txt");
 
-CAFFE2_DEFINE_int(iters, 10 * 1000, "The of training runs.");
-CAFFE2_DEFINE_int(seq_length, 25, "One training example sequence length");
-CAFFE2_DEFINE_int(batch, 1, "Training batch size");
-CAFFE2_DEFINE_int(iters_to_report, 500,
+C10_DEFINE_int(iters, 10 * 1000, "The of training runs.");
+C10_DEFINE_int(seq_length, 25, "One training example sequence length");
+C10_DEFINE_int(batch, 1, "Training batch size");
+C10_DEFINE_int(iters_to_report, 500,
                   "How often to report loss and generate text");
-CAFFE2_DEFINE_int(hidden_size, 100, "Dimension of the hidden representation");
-CAFFE2_DEFINE_int(gen_length, 500, "One forward example sequence length");
+C10_DEFINE_int(hidden_size, 100, "Dimension of the hidden representation");
+C10_DEFINE_int(gen_length, 500, "One forward example sequence length");
 
 namespace caffe2 {
 
@@ -26,7 +27,7 @@ void AddFC(ModelUtil &model, const std::string &input,
   model.init.AddConstantFillOp({out_size}, output + "_b");
   model.predict.AddInput(output + "_b");
   model.predict.AddFcOp(input, output + "_w", output + "_b", output, 2)
-      ->set_engine("CUDNN");
+      ->set_engine("CPU");
 }
 
 void AddLSTM(ModelUtil &model, const std::string &input_blob,
@@ -52,13 +53,13 @@ void AddSGD(ModelUtil &model, float base_learning_rate,
             const std::string &policy, int stepsize, float gamma) {
   model.predict.AddAtomicIterOp("iteration_mutex", "optimizer_iteration")
       ->mutable_device_option()
-      ->set_device_type(CPU);
+      ->set_device_type(PROTO_CPU);
   model.init.AddConstantFillOp({1}, (int64_t)0, "optimizer_iteration")
       ->mutable_device_option()
-      ->set_device_type(CPU);
+      ->set_device_type(PROTO_CPU);
   model.init.AddCreateMutexOp("iteration_mutex")
       ->mutable_device_option()
-      ->set_device_type(CPU);
+      ->set_device_type(PROTO_CPU);
   model.predict.AddInput("iteration_mutex");
   model.predict.AddInput("optimizer_iteration");
   model.init.AddConstantFillOp({1}, 1.f, "ONE");
@@ -80,6 +81,8 @@ void run() {
   std::cout << "https://caffe2.ai/docs/RNNs-and-LSTM-networks.html"
             << std::endl;
   std::cout << std::endl;
+
+  std::cout<<FLAGS_train_data<<std::endl;
 
   if (!std::ifstream(FLAGS_train_data).good()) {
     std::cerr << "error: Text file missing: " << FLAGS_train_data << std::endl;
@@ -211,11 +214,11 @@ void run() {
   prepare.AddInput(hidden_output);
   prepare.AddInput(cell_state);
 
-  if (FLAGS_device != "cpu") {
+/*  if (FLAGS_device != "cpu") {
     model.SetDeviceCUDA();
     train.SetDeviceCUDA();
     prepare.SetDeviceCUDA();
-  }
+  }*/
 
   if (FLAGS_dump_model) {
     std::cout << model.init.Short();
@@ -250,30 +253,34 @@ void run() {
   // >>> text_block_starts = list(range(0, N, text_block_size))
   std::vector<int> text_block_starts;
   for (auto i = 0; i < N; i += text_block_size) {
-    text_block_starts.push_back(i);
+	  text_block_starts.push_back(i);
   }
   // >>> text_block_sizes = [text_block_size] * self.batch_size
   std::vector<int> text_block_sizes(FLAGS_batch, text_block_size);
   // >>> text_block_sizes[self.batch_size - 1] += N % self.batch_size
   text_block_sizes[FLAGS_batch - 1] += N % FLAGS_batch;
   // >>> assert sum(text_block_sizes) == N
-  CAFFE_ENFORCE_EQ(std::accumulate(text_block_sizes.begin(),
+  /* I took out on 11 06 2018 CAFFE_ENFORCE_EQ(std::accumulate(text_block_sizes.begin(),
                                    text_block_sizes.end(), 0, std::plus<int>()),
-                   N);
+                   N);*/
 
   // >>> workspace.FeedBlob(self.hidden_output, np.zeros([1, self.batch_size,
   // self.hidden_size], dtype=np.float32))
   {
-    std::vector<float> data(FLAGS_batch * FLAGS_hidden_size);
-    auto value = TensorCPU({1, FLAGS_batch, FLAGS_hidden_size}, data, NULL);
-    BlobUtil(*workspace.CreateBlob(hidden_output)).Set(value, true);
+	  std::vector<float> data(FLAGS_batch * FLAGS_hidden_size);
+	  std::vector<int> dim({1, FLAGS_batch, FLAGS_hidden_size});
+
+	  BlobUtil(*workspace.CreateBlob(hidden_output)).Set<float>(dim, data, false);
   }
   // >>> workspace.FeedBlob(self.cell_state, np.zeros([1, self.batch_size,
   // self.hidden_size], dtype=np.float32))
   {
     std::vector<float> data(FLAGS_batch * FLAGS_hidden_size);
-    auto value = TensorCPU({1, FLAGS_batch, FLAGS_hidden_size}, data, NULL);
-    BlobUtil(*workspace.CreateBlob(cell_state)).Set(value, true);
+    std::vector<int> dim({1, FLAGS_batch, FLAGS_hidden_size});
+
+
+    //BlobUtil(*workspace.CreateBlob(cell_state)).Set(value, true);
+    BlobUtil(*workspace.CreateBlob(cell_state)).Set(dim, data, false);
   }
   // >>> workspace.CreateNet(self.prepare_state)
   CAFFE_ENFORCE(workspace.CreateNet(prepare.net));
@@ -298,8 +305,11 @@ void run() {
     // self.batch_size, dtype=np.int32))
     {
       std::vector<int> data(FLAGS_batch, FLAGS_seq_length);
-      auto value = TensorCPU({FLAGS_batch}, data, NULL);
-      BlobUtil(*workspace.CreateBlob("seq_lengths")).Set(value, true);
+      std::vector<int> dim({FLAGS_batch});
+      //auto value = TensorCPU(dim,DeviceType::CPU);
+      //BlobUtil(*workspace.CreateBlob("seq_lengths")).Set(value, true);
+      //BlobUtil(*workspace.CreateBlob("seq_lengths")).Set(dim, data, false);
+      BlobUtil(*workspace.CreateBlob("seq_lengths")).Set(dim, data, false);
     }
 
     // >>> workspace.RunNet(self.prepare_state.Name())
@@ -333,13 +343,17 @@ void run() {
 
     // >>> workspace.FeedBlob('input_blob', input)
     {
-      auto value = TensorCPU({FLAGS_seq_length, FLAGS_batch, D}, input, NULL);
-      BlobUtil(*workspace.CreateBlob("input_blob")).Set(value, true);
+    	std::vector<int> dim({FLAGS_seq_length, FLAGS_batch, D});
+      //auto value = Tensor(dim, DeviceType::CPU);//Tensor(dim, input, NULL);
+      //BlobUtil(*workspace.CreateBlob("input_blob")).Set(value, true);
+    	BlobUtil(*workspace.CreateBlob("input_blob")).Set(dim, input, false);
     }
     // >>> workspace.FeedBlob('target', target)
     {
-      auto value = TensorCPU({FLAGS_seq_length * FLAGS_batch}, target, NULL);
-      BlobUtil(*workspace.CreateBlob("target")).Set(value, true);
+    	std::vector<int> dim({FLAGS_seq_length * FLAGS_batch});
+      //auto value = Tensor(dim, DeviceType::CPU);//TensorCPU({FLAGS_seq_length * FLAGS_batch}, target, NULL);
+      //BlobUtil(*workspace.CreateBlob("target")).Set(value, true);
+    	BlobUtil(*workspace.CreateBlob("target")).Set(dim, target, false);
     }
 
     // >>> workspace.RunNet(self.model.net.Name())
@@ -396,8 +410,10 @@ void run() {
         // dtype=np.int32))
         {
           std::vector<int> data(FLAGS_batch, 1);
-          auto value = TensorCPU({FLAGS_batch}, data, NULL);
-          BlobUtil(*workspace.CreateBlob("seq_lengths")).Set(value, true);
+          std::vector<int> dim({FLAGS_batch});
+          //auto value = Tensor(dim, DeviceType::CPU);//TensorCPU({FLAGS_batch}, data, NULL);
+          //BlobUtil(*workspace.CreateBlob("seq_lengths")).Set(value, true);
+          BlobUtil(*workspace.CreateBlob("seq_lengths")).Set(dim,data,false);
         }
 
         // >>> workspace.RunNet(self.prepare_state.Name())
@@ -410,8 +426,10 @@ void run() {
 
         // >>> workspace.FeedBlob("input_blob", input)
         {
-          auto value = TensorCPU({1, FLAGS_batch, D}, input, NULL);
-          BlobUtil(*workspace.CreateBlob("input_blob")).Set(value, true);
+        	std::vector<int> dim({1, FLAGS_batch, D});
+          //auto value = Tensor(dim, DeviceType::CPU);//TensorCPU({1, FLAGS_batch, D}, input, NULL);
+          //BlobUtil(*workspace.CreateBlob("input_blob")).Set(value, true);
+          BlobUtil(*workspace.CreateBlob("input_blob")).Set(dim,input,false);
         }
         // >>> workspace.RunNet(self.forward_net.Name())
         CAFFE_ENFORCE(workspace.RunNet(model.predict.net.name()));
