@@ -71,9 +71,9 @@ std::string net_short_op(const OperatorDef& def) {
   if (def.has_device_option() && def.device_option().has_device_type()) {
     stream << " device_type:" << def.device_option().device_type();
   }
-  if (def.has_device_option() && def.device_option().has_cuda_gpu_id()) {
-    stream << " cuda_gpu_id:" << def.device_option().cuda_gpu_id();
-  }
+  //if (def.has_device_option() && def.device_option().has_cuda_gpu_id()) {
+  //  stream << " cuda_gpu_id:" << def.device_option().cuda_gpu_id();
+  //}
   if (def.has_is_gradient_op()) {
     stream << " is_gradient_op:true";
   }
@@ -91,9 +91,9 @@ std::string net_short_net(const NetDef& def) {
   if (def.has_device_option() && def.device_option().has_device_type()) {
     stream << "device_type:" << def.device_option().device_type() << std::endl;
   }
-  if (def.has_device_option() && def.device_option().has_cuda_gpu_id()) {
-    stream << "cuda_gpu_id:" << def.device_option().cuda_gpu_id() << std::endl;
-  }
+  //if (def.has_device_option() && def.device_option().has_cuda_gpu_id()) {
+  //  stream << "cuda_gpu_id:" << def.device_option().cuda_gpu_id() << std::endl;
+  //}
   if (def.has_num_workers()) {
     stream << "num_workers: " << def.num_workers() << std::endl;
   }
