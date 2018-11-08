@@ -1,7 +1,7 @@
 #include "model.pb.h"
 
-#include "caffe2/util/blob.h"
-#include "caffe2/util/model.h"
+#include "blob.h"
+#include "model.h"
 
 #include <fcntl.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -78,7 +78,7 @@ void ModelUtil::AddXentOps(const std::string &output) {
 void ModelUtil::AddIterOps() {
   init.AddConstantFillOp({1}, (int64_t)0, iter_name)
       ->mutable_device_option()
-      ->set_device_type(CPU);
+      ->set_device_type(PROTO_CPU);
   predict.AddInput(iter_name);
   predict.AddIterOp(iter_name);
 }
