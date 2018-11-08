@@ -2,7 +2,7 @@
 #define UTIL_MODEL_H
 
 #include <caffe2/core/net.h>
-#include "caffe2/util/net.h"
+#include "net.h"
 
 class ModelMeta;
 
