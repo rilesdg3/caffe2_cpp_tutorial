@@ -69,6 +69,11 @@ void ModelUtil::AddTestOps(const std::string &output) {
   predict.AddInput(iter_name);
 }
 
+
+/*
+ * Add operations for CrossEntropy???
+ *
+ */
 void ModelUtil::AddXentOps(const std::string &output) {
   predict.AddLabelCrossEntropyOp(output, label_name, xent_name);
   predict.AddAveragedLossOp(xent_name, loss_name);
@@ -76,6 +81,14 @@ void ModelUtil::AddXentOps(const std::string &output) {
 }
 
 void ModelUtil::AddIterOps() {
+  init.AddConstantFillOp({1}, (int64_t)0, iter_name)
+      ->mutable_device_option()
+      ->set_device_type(PROTO_CPU);
+  predict.AddInput(iter_name);
+  predict.AddIterOp(iter_name);
+}
+
+void ModelUtil::AddAtomicIterOps() {
   init.AddConstantFillOp({1}, (int64_t)0, iter_name)
       ->mutable_device_option()
       ->set_device_type(PROTO_CPU);
@@ -301,6 +314,11 @@ void set_trainable(OperatorDef &op, bool train) {
   }
 }
 
+
+/*
+ * I think this takes a train type model and copies it into
+ * a predict type model???
+ */
 void ModelUtil::CopyTrain(const std::string &layer, int out_size,
                           ModelUtil &train) const {
   std::string last_w, last_b;

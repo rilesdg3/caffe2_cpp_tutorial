@@ -1,6 +1,10 @@
-#include "caffe2/util/net.h"
+#include "net.h"
 
 namespace caffe2 {
+
+//ryan added the below comment on 2019 06 28
+//These are were everything is actually add to the caffe2 net
+//The function that call these functions just put everything together
 
 OperatorDef* NetUtil::AddOp(const std::string& name,
                             const std::vector<std::string>& inputs,
@@ -44,7 +48,7 @@ Argument* net_add_arg(OperatorDef& op, const std::string& name,
 }
 
 Argument* net_add_arg(OperatorDef& op, const std::string& name,
-                      std::vector<TIndex> values) {
+                      std::vector<int64_t> values) {
   auto arg = net_add_arg(op, name);
   for (auto value : values) {
     arg->add_ints(value);
@@ -252,7 +256,7 @@ OperatorDef* NetUtil::AddVectorFillOp(const std::vector<int>& values,
 OperatorDef* NetUtil::AddGivenTensorFillOp(const TensorCPU& tensor,
                                            const std::string& name) {
   auto op = AddOp("GivenTensorFill", {}, {name});
-  net_add_arg(*op, "shape", tensor.dims());
+  //net_add_arg(*op, "shape", tensor.dims());
   auto arg = net_add_arg(*op, "values");
   const auto& data = tensor.data<float>();
   for (auto i = 0; i < tensor.size(); ++i) {
@@ -263,6 +267,10 @@ OperatorDef* NetUtil::AddGivenTensorFillOp(const TensorCPU& tensor,
 
 // Prediction
 
+OperatorDef* NetUtil::AddArgMax(const std::string& input,const std::string& output){
+	  auto op = AddOp("ArgMax", {input}, {output});
+	  return op;
+}
 OperatorDef* NetUtil::AddConvOp(const std::string& input, const std::string& w,
                                 const std::string& b, const std::string& output,
                                 int stride, int padding, int kernel, int group,
@@ -363,6 +371,21 @@ OperatorDef* NetUtil::AddSoftmaxOp(const std::string& input,
   return op;
 }
 
+OperatorDef* NetUtil::AddSoftmaxWithLossOp(const std::string& logits, const std::string& label,
+											const std::string& softmax, const std::string& loss,
+											std::string weight_tensor) {
+	if(weight_tensor == "null"){
+		auto op = AddOp("SoftmaxWithLoss", {logits, label}, {softmax, loss});
+		return op;
+	}
+	else{
+		auto op = AddOp("SoftmaxWithLoss", {logits, label, weight_tensor}, {softmax, loss});
+		return op;
+	}
+
+
+}
+
 OperatorDef* NetUtil::AddConcatOp(const std::vector<std::string>& inputs,
                                   const std::string& output,
                                   const std::string& order) {
@@ -405,6 +428,13 @@ OperatorDef* NetUtil::AddAddOp(const std::vector<std::string>& inputs,
   net_add_arg(*op, "broadcast", broadcast);
   return op;
 }
+
+OperatorDef* NetUtil::AddTanhOp(const std::string& input,
+                                   const std::string& output) {
+  auto op = AddOp("Tanh", {input}, {output});
+  return op;
+}
+
 
 OperatorDef* NetUtil::AddLSTMUnitOp(const std::vector<std::string>& inputs,
                                     const std::vector<std::string>& outputs,
@@ -533,6 +563,24 @@ OperatorDef* NetUtil::AddAdagradOp(const std::string& param,
   return AddOp("Adagrad", {param, moment, grad, lr}, {param, moment});
 }
 
+/*OperatorDef* NetUtil::AddAdamOp(const std::vector<std::string>& param,
+                                const std::vector<std::string>& moments,
+                                const std::string& grad, const std::string& lr,
+                                const std::string& iter) {
+  auto op = AddOp("Adam", {param}, {param});
+  for (auto& moment : moments) {
+    op->add_input(moment);
+  }
+  op->add_input(grad);
+  op->add_input(lr);
+  op->add_input(iter);
+  for (auto& moment : moments) {
+    op->add_output(moment);
+  }
+  return op;
+}*/
+
+
 OperatorDef* NetUtil::AddAdamOp(const std::string& param,
                                 const std::vector<std::string>& moments,
                                 const std::string& grad, const std::string& lr,
@@ -594,6 +642,12 @@ OperatorDef* NetUtil::AddIterOp(const std::string& iter) {
   return AddOp("Iter", {iter}, {iter});
 }
 
+/*
+ * @brief Creates an atomic Iteration operation
+ * see https://stackoverflow.com/questions/31978324/what-exactly-is-stdatomic
+ * for a good definition of atomic
+ *
+ */
 OperatorDef* NetUtil::AddAtomicIterOp(const std::string& mutex,
                                       const std::string& iter) {
   return AddOp("AtomicIter", {mutex, iter}, {iter});
