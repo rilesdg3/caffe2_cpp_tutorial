@@ -20,6 +20,7 @@ class ModelUtil {
                       int batch_size);
   void AddXentOps(const std::string &output);
   void AddIterOps();
+  void AddAtomicIterOps();
 
   void AddSgdOps();
   void AddMomentumOps();
