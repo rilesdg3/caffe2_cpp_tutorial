@@ -63,6 +63,8 @@ class NetUtil {
   OperatorDef* AddGivenTensorFillOp(const TensorCPU& tensor,
                                     const std::string& name);
 
+
+  OperatorDef* AddArgMax(const std::string& input,const std::string& output);
   OperatorDef* AddConvOp(const std::string& input, const std::string& w,
                          const std::string& b, const std::string& output,
                          int stride, int padding, int kernel, int group = 0,
@@ -89,6 +91,8 @@ class NetUtil {
                             float ratio);
   OperatorDef* AddSoftmaxOp(const std::string& input, const std::string& output,
                             int axis = 1);
+  OperatorDef* AddSoftmaxWithLossOp(const std::string& logits, const std::string& label,
+                                     const std::string& softmax, const std::string& loss, std::string weight_tensor = "null");
   OperatorDef* AddConcatOp(const std::vector<std::string>& inputs,
                            const std::string& output,
                            const std::string& order = "NCHW");
@@ -103,7 +107,8 @@ class NetUtil {
   OperatorDef* AddAddOp(const std::vector<std::string>& inputs,
                         const std::string& output, int axis = 1,
                         int broadcast = 1);
-
+  OperatorDef* AddTanhOp(const std::string& input,
+                                     const std::string& output);
   OperatorDef* AddLSTMUnitOp(const std::vector<std::string>& inputs,
                              const std::vector<std::string>& outputs,
                              int drop_states = 0, float forget_bias = 0.f);
@@ -125,9 +130,10 @@ class NetUtil {
   OperatorDef* AddDiagonalOp(const std::string& input,
                              const std::string& diagonal,
                              const std::vector<int>& offset);
-  OperatorDef* AddSquaredL2Op(const std::string& input, const std::string& l2);
+  OperatorDef* AddSquaredL2Op(const std::string& input, const std::string& target, const std::string& l2);
   OperatorDef* AddSquaredL2ChannelOp(const std::string& input,
                                      const std::string& l2, int channel);
+  OperatorDef* AddL1DistanceOp(const std::string& input,const std::string& target, const std::string& l1);
   OperatorDef* AddBackMeanOp(const std::string& input, const std::string& mean,
                              int count = 1);
   OperatorDef* AddMeanStdevOp(const std::string& input, const std::string& mean,
