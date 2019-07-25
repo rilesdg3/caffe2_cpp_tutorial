@@ -483,9 +483,9 @@ OperatorDef* NetUtil::AddBackMeanOp(const std::string& input,
   return op;
 }
 
-OperatorDef* NetUtil::AddSquaredL2Op(const std::string& input,
+OperatorDef* NetUtil::AddSquaredL2Op(const std::string& input,const std::string& target,
                                      const std::string& l2) {
-  return AddOp("SquaredL2", {input}, {l2});
+  return AddOp("SquaredL2Distance", {input,target}, {l2});
 }
 
 OperatorDef* NetUtil::AddSquaredL2ChannelOp(const std::string& input,
@@ -494,6 +494,11 @@ OperatorDef* NetUtil::AddSquaredL2ChannelOp(const std::string& input,
   auto op = AddOp("SquaredL2Channel", {input}, {l2});
   net_add_arg(*op, "channel", channel);
   return op;
+}
+
+OperatorDef* NetUtil::AddL1DistanceOp(const std::string& input,const std::string& target,
+                                     const std::string& l1) {
+  return AddOp("L1Distance", {input,target}, {l1});
 }
 
 OperatorDef* NetUtil::AddMeanStdevOp(const std::string& input,

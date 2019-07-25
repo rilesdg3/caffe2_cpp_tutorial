@@ -1,4 +1,4 @@
-#include "caffe2/util/net.h"
+#include "net.h"
 
 #ifdef WITH_CUDA
 #include <caffe2/core/context_gpu.h>
@@ -39,7 +39,7 @@ void NetUtil::SetFillToTrain() {
   for (auto& op : *net.mutable_op()) {
     if (op.type() == "GivenTensorFill") {
       if (op.output(0).find("_w") != std::string::npos) {
-        op.set_type("XavierFill");
+        op.set_type("XavierFill");//should I cahnge to unifomr here
       }
       if (op.output(0).find("_b") != std::string::npos) {
         op.set_type("ConstantFill");
@@ -54,7 +54,7 @@ const std::set<std::string> non_inplace_ops({
 });
 
 void NetUtil::SetRenameInplace() {
-  std::set<std::string> renames;
+  std::set<std::string> renames;//this shouldn't be empty
   for (auto& op : *net.mutable_op()) {
     if (renames.find(op.input(0)) != renames.end()) {
       op.set_input(0, op.input(0) + "_unique");

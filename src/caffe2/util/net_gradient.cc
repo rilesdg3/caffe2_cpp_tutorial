@@ -1,4 +1,4 @@
-#include "caffe2/util/net.h"
+#include "net.h"
 
 namespace caffe2 {
 
@@ -14,6 +14,8 @@ const std::set<std::string> trainable_ops({
     "Dropout",
     "EnsureCPUOutput",
     "FC",
+	"LeakyRelu",
+	"L1Distance",
     "LabelCrossEntropy",
     "LRN",
     "MaxPool",
@@ -21,17 +23,21 @@ const std::set<std::string> trainable_ops({
     "RecurrentNetwork",
     "Relu",
     "Reshape",
+	"Sigmoid",
     "Slice",
     "Softmax",
+	"SoftmaxWithLoss",
     "SpatialBN",
-    "SquaredL2",
+    "SquaredL2Distance",
     "SquaredL2Channel",
     "StopGradient",
     "Sum",
+	"Tanh",
 });
 
 const std::set<std::string> non_trainable_ops({
     "Accuracy",
+	"ArgMax",
     "Cast",
     "Cout",
     "ConstantFill",

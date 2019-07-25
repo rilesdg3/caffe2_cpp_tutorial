@@ -54,6 +54,8 @@ void ModelUtil::AddDatabaseOps(const std::string &name, const std::string &data,
   // predict.AddCoutOp(label_name);
 }
 
+
+
 void ModelUtil::AddTrainOps(const std::string &output, float base_rate,
                             std::string &optimizer) {
   AddXentOps(output);
@@ -71,7 +73,7 @@ void ModelUtil::AddTestOps(const std::string &output) {
 
 
 /*
- * Add operations for CrossEntropy???
+ * Adds operations for CrossEntropy???
  *
  */
 void ModelUtil::AddXentOps(const std::string &output) {
@@ -88,12 +90,14 @@ void ModelUtil::AddIterOps() {
   predict.AddIterOp(iter_name);
 }
 
+/* I was starting to add this on 07 09 2019
+ */
 void ModelUtil::AddAtomicIterOps() {
-  init.AddConstantFillOp({1}, (int64_t)0, iter_name)
-      ->mutable_device_option()
-      ->set_device_type(PROTO_CPU);
-  predict.AddInput(iter_name);
-  predict.AddIterOp(iter_name);
+ // init.AddConstantFillOp({1}, (int64_t)0, iter_name)
+ //     ->mutable_device_option()
+ //     ->set_device_type(PROTO_CPU);
+  //predict.AddInput(iter_name);
+  //predict.AddIterOp(iter_name);
 }
 
 void ModelUtil::AddSgdOps() {
@@ -178,7 +182,10 @@ void ModelUtil::AddOptimizerOps(std::string &optimizer) {
 void ModelUtil::AddFcOps(const std::string &input, const std::string &output,
                          int in_size, int out_size, bool test) {
   if (!test) {
-    init.AddXavierFillOp({out_size, in_size}, output + "_w");
+    //init.AddXavierFillOp({out_size, in_size}, output + "_w");
+	  float min = -std::sqrt(6.0/(in_size+out_size));
+	  	float max = std::sqrt(6.0/(in_size+out_size));
+	  	init.AddUniformFillOp({out_size, in_size}, min, max, output + "_w");
     init.AddConstantFillOp({out_size}, output + "_b");
   }
   predict.AddInput(output + "_w");
@@ -324,6 +331,7 @@ void ModelUtil::CopyTrain(const std::string &layer, int out_size,
   std::string last_w, last_b;
   for (const auto &op : predict.net.op()) {
     auto new_op = train.predict.net.add_op();
+    std::cout<<op.type()<<std::endl;
     new_op->CopyFrom(op);
     set_trainable(*new_op, true);
     if (op.type() == "FC") {
@@ -331,7 +339,7 @@ void ModelUtil::CopyTrain(const std::string &layer, int out_size,
       last_b = op.input(2);
     }
   }
-  train.predict.SetRenameInplace();
+  //I don't know what this does but I donlt think it works train.predict.SetRenameInplace();
   for (const auto &op : init.net.op()) {
     auto &output = op.output(0);
     auto init_op = train.init.net.add_op();
@@ -353,6 +361,7 @@ void ModelUtil::CopyTrain(const std::string &layer, int out_size,
         init_arg->set_name("value");
         init_arg->CopyFrom(arg);
       }
+
     }
     init_op->add_output(output);
   }
@@ -399,11 +408,16 @@ void ModelUtil::CopyTest(ModelUtil &test) const {
 }
 
 void ModelUtil::CopyDeploy(ModelUtil &deploy, Workspace &workspace) const {
+	//std::cout<<deploy.Proto()<<std::endl;
   for (const auto &op : init.net.op()) {
+
     auto &output = op.output(0);
     auto blob = workspace.GetBlob(output);
-    if (blob) {
+    //std::cout<<"output "<<output<<std::endl;
+    //output.compare(iter_name)!=0 add becuase iter is an int and tensor.data<float>() is a float may not be needed may had made mistake some were else
+    if (blob && output.compare(iter_name)!=0) {
       auto tensor = BlobUtil(*blob).Get();
+      //std::cout<<tensor.DebugString()<<std::endl;
       auto init_op = deploy.init.net.add_op();
       init_op->set_type("GivenTensorFill");
       auto arg1 = init_op->add_arg();
