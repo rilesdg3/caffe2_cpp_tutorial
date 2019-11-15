@@ -1,20 +1,27 @@
 #ifndef ZOO_RESNET_H
 #define ZOO_RESNET_H
 
-#include "caffe2/util/model.h"
+//#pragma once
+#include "model.h"
 
 namespace caffe2 {
 
-std::string tos(int i) { return std::to_string(i); }
+
+//std::string tos(int i) { return std::to_string(i); }
 
 class ResNetModel : public ModelUtil {
  public:
   ResNetModel(NetDef &initnet, NetDef &predictnet)
       : ModelUtil(initnet, predictnet) {}
 
+
+  std::string tos(int i) { return std::to_string(i); };
+
   OperatorDef *AddConvOps(const std::string &input, const std::string &output,
                           const std::string &infix, int in_size, int out_size,
                           int stride, int padding, int kernel, bool train) {
+
+	  cout<<"AddConvOps"<<" in_size "<<in_size<<" out_size "<<out_size<<" stride "<<stride<<" padding "<<padding<<" kernel "<<kernel<<endl;
     auto b = output + (infix.size() ? "_conv_" + infix : "");
     init.AddMSRAFillOp({out_size, in_size, kernel, kernel}, b + "_w");
     predict.AddInput(b + "_w");
@@ -42,6 +49,7 @@ class ResNetModel : public ModelUtil {
     predict.AddInput(output + "_w");
     init.AddConstantFillOp({out_size}, output + "_b");
     predict.AddInput(output + "_b");
+	  cout<<"AddFcOps"<<" in_size "<<in_size<<" out_size "<<out_size<<endl;
     return predict.AddFcOp(input, output + "_w", output + "_b", output);
   }
 
@@ -102,11 +110,15 @@ class ResNetModel : public ModelUtil {
 
   OperatorDef *AddTrain(const std::string &input) {
     std::string layer = input;
-    layer = predict.AddSoftmaxOp(layer, "softmax")->output(0);
-    layer = predict.AddLabelCrossEntropyOp(layer, "label", "xent")->output(0);
-    layer = predict.AddAveragedLossOp(layer, "loss")->output(0);
+    predict.AddInput("label");
+    predict.AddInput("argmax");
+    //layer = predict.AddSoftmaxOp(layer, "softmax")->output(0);
+    //layer = predict.AddLabelCrossEntropyOp(layer, "label", "xent")->output(0);
+    layer = predict.AddSoftmaxWithLossOp(layer, "label", "softmax", "loss")->output(0);
+    //layer = predict.AddAveragedLossOp(layer, "loss")->output(0);
     predict.AddAccuracyOp("softmax", "label", "top-1");
-    return predict.AddAccuracyOp("softmax", "label", "top-5", 5);
+    predict.AddArgMax("softmax", "argmax");
+    return predict.AddAccuracyOp("softmax", "label", "pred");//return predict.AddAccuracyOp("softmax", "label", "top-5", 5);
   }
 
   OperatorDef *AddEnd(const std::string &prefix, const std::string &input,
@@ -114,11 +126,13 @@ class ResNetModel : public ModelUtil {
     std::string layer = input;
     layer =
         predict.AddAveragePoolOp(layer, "final_avg", stride, 0, 7)->output(0);
+    //return AddFcOps(layer, "last_out_L1000", in_size, 1400*2100);
     return AddFcOps(layer, "last_out_L1000", in_size, out_size);
   }
 
   OperatorDef *AddBlock2(int &n, const std::string &layer, int in_size,
                          int out_size, int stride, int depth, bool train) {
+	  cout<<"AddBlock2"<<" in_size "<<in_size<<" out_size "<<out_size<<" stride "<<stride<<" depth "<<depth<<endl;
     auto op = AddRes2(tos(n++), layer, in_size, out_size, stride, train);
     for (int i = 1; i < depth; i++) {
       op = AddRes2(tos(n++), op->output(0), out_size, out_size, 1, train);
@@ -137,6 +151,7 @@ class ResNetModel : public ModelUtil {
 
   void Add(int type, int out_size, bool train = false) {
     predict.SetName("ResNet" + std::to_string(type));
+    init.SetName("ResNet" + std::to_string(type));
     auto input = "data";
     auto n = 0;
 
@@ -171,8 +186,11 @@ class ResNetModel : public ModelUtil {
     } else {
       layer = predict.AddSoftmaxOp(layer, "prob")->output(0);
     }
+    cout<<layer<<endl;
     predict.AddOutput(layer);
     init.AddConstantFillOp({1}, input);
+    //cout<<predict.net.DebugString()<<endl;
+
   }
 };
 
