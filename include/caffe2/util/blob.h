@@ -13,7 +13,13 @@ class BlobUtil {
   TensorCPU Get();
   void Set(const TensorCPU &value, bool force_cuda = false);
   template<typename T>
-  void Set(const std::vector<int > &dim, const std::vector<T> &data, bool force_cuda = false);
+    void Set(int, const std::vector<int > &dim, const std::vector<T> &data, bool force_cuda = false);
+  template<typename T>
+  void Set(const std::vector<int > &dim, const std::vector<T> &data, int, bool force_cuda = false);
+  template<typename T>
+  void Set(const std::vector<int > &dim, const std::vector<std::vector<T> > &data, int start, bool force_cuda = false);
+  template<typename T>
+  void Set(const std::vector<int > &dim, const T &data, bool force_cuda = false);
   void Print(const std::string &name = "", int max = 100);
 
  protected:
